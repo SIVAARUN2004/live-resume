@@ -1,0 +1,1617 @@
+Pom.xml 
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.2.3</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.pinterest</groupId>
+	<artifactId>backend</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>pinterest-backend</name>
+	<description>Pinterest Clone Backend</description>
+	<properties>
+		<java.version>17</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.modelmapper</groupId>
+			<artifactId>modelmapper</artifactId>
+			<version>3.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
+
+
+
+
+Schema.sql
+------------
+-- Create Database
+CREATE DATABASE IF NOT EXISTS pinterest_db;
+USE pinterest_db;
+
+-- Table: roles
+CREATE TABLE IF NOT EXISTS roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20)
+);
+
+-- Insert Roles
+INSERT INTO roles(name) VALUES('ROLE_USER');
+INSERT INTO roles(name) VALUES('ROLE_ADMIN');
+
+-- Table: users
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(20) NOT NULL,
+    email VARCHAR(50) NOT NULL,
+    password VARCHAR(120) NOT NULL,
+    full_name VARCHAR(255),
+    UNIQUE (username),
+    UNIQUE (email)
+);
+
+-- Table: user_roles
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id BIGINT NOT NULL,
+    role_id INT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (role_id) REFERENCES roles (id)
+);
+
+
+application.properties
+-----------------------
+spring.application.name=pinterest-backend
+server.port=8090
+
+# Database Configuration
+spring.datasource.url=jdbc:mysql://localhost:3306/pinterest_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=root
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# JWT Configuration
+# 256-bit secret key
+pinterest.app.jwtSecret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+pinterest.app.jwtExpirationMs=86400000
+
+# Logging
+logging.level.org.springframework.security=DEBUG
+
+
+
+pinterestBackendApplication.class
+----------------------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class PinterestBackendApplication {
+   public PinterestBackendApplication() {
+   }
+
+   public static void main(String[] args) {
+      SpringApplication.run(PinterestBackendApplication.class, args);
+   }
+
+   @Bean
+   public ModelMapper modelMapper() {
+      return new ModelMapper();
+   }
+}
+
+
+
+WebSecurityConfig.class
+-----------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.security;
+
+import com.pinterest.backend.security.jwt.AuthEntryPointJwt;
+import com.pinterest.backend.security.jwt.AuthTokenFilter;
+import com.pinterest.backend.security.services.UserDetailsServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableMethodSecurity
+public class WebSecurityConfig {
+   @Autowired
+   UserDetailsServiceImpl userDetailsService;
+   @Autowired
+   private AuthEntryPointJwt unauthorizedHandler;
+
+   public WebSecurityConfig() {
+   }
+
+   @Bean
+   public AuthTokenFilter authenticationJwtTokenFilter() {
+      return new AuthTokenFilter();
+   }
+
+   @Bean
+   public DaoAuthenticationProvider authenticationProvider() {
+      DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+      authProvider.setUserDetailsService(this.userDetailsService);
+      authProvider.setPasswordEncoder(this.passwordEncoder());
+      return authProvider;
+   }
+
+   @Bean
+   public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+      return authConfig.getAuthenticationManager();
+   }
+
+   @Bean
+   public PasswordEncoder passwordEncoder() {
+      return new BCryptPasswordEncoder();
+   }
+
+   @Bean
+   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+      http.csrf((csrf) -> {
+         csrf.disable();
+      }).exceptionHandling((exception) -> {
+         exception.authenticationEntryPoint(this.unauthorizedHandler);
+      }).sessionManagement((session) -> {
+         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+      }).authorizeHttpRequests((auth) -> {
+         ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)auth.requestMatchers(new String[]{"/api/auth/**"})).permitAll().requestMatchers(new String[]{"/api/test/**"})).permitAll().anyRequest()).authenticated();
+      });
+      http.authenticationProvider(this.authenticationProvider());
+      http.addFilterBefore(this.authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+      return (SecurityFilterChain)http.build();
+   }
+}
+
+
+
+UserDetailsImpl.class
+---------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.security.services;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pinterest.backend.models.User;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+public class UserDetailsImpl implements UserDetails {
+   private static final long serialVersionUID = 1L;
+   private Long id;
+   private String username;
+   private String email;
+   @JsonIgnore
+   private String password;
+   private Collection<? extends GrantedAuthority> authorities;
+
+   public UserDetailsImpl(Long id, String username, String email, String password, Collection<? extends GrantedAuthority> authorities) {
+      this.id = id;
+      this.username = username;
+      this.email = email;
+      this.password = password;
+      this.authorities = authorities;
+   }
+
+   public static UserDetailsImpl build(User user) {
+      List<GrantedAuthority> authorities = (List)user.getRoles().stream().map((role) -> {
+         return new SimpleGrantedAuthority(role.getName().name());
+      }).collect(Collectors.toList());
+      return new UserDetailsImpl(user.getId(), user.getUsername(), user.getEmail(), user.getPassword(), authorities);
+   }
+
+   public Collection<? extends GrantedAuthority> getAuthorities() {
+      return this.authorities;
+   }
+
+   public Long getId() {
+      return this.id;
+   }
+
+   public String getEmail() {
+      return this.email;
+   }
+
+   public String getPassword() {
+      return this.password;
+   }
+
+   public String getUsername() {
+      return this.username;
+   }
+
+   public boolean isAccountNonExpired() {
+      return true;
+   }
+
+   public boolean isAccountNonLocked() {
+      return true;
+   }
+
+   public boolean isCredentialsNonExpired() {
+      return true;
+   }
+
+   public boolean isEnabled() {
+      return true;
+   }
+
+   public boolean equals(Object o) {
+      if (this == o) {
+         return true;
+      } else if (o != null && this.getClass() == o.getClass()) {
+         UserDetailsImpl user = (UserDetailsImpl)o;
+         return Objects.equals(this.id, user.id);
+      } else {
+         return false;
+      }
+   }
+}
+
+
+
+UserDetailsServiceImpl.class
+-----------------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.security.services;
+
+import com.pinterest.backend.models.User;
+import com.pinterest.backend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+   @Autowired
+   UserRepository userRepository;
+
+   public UserDetailsServiceImpl() {
+   }
+
+   @Transactional
+   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+      User user = (User)this.userRepository.findByUsername(username).orElseThrow(() -> {
+         return new UsernameNotFoundException("User Not Found with username: " + username);
+      });
+      return UserDetailsImpl.build(user);
+   }
+}
+
+jwt/AuthEntryPointJwt.class
+----------------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.security.jwt;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AuthEntryPointJwt implements AuthenticationEntryPoint {
+   private static final Logger logger = LoggerFactory.getLogger(AuthEntryPointJwt.class);
+
+   public AuthEntryPointJwt() {
+   }
+
+   public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
+      logger.error("Unauthorized error: {}", authException.getMessage());
+      response.sendError(401, "Error: Unauthorized");
+   }
+}
+
+
+
+jwt/AuthTokenFilter.class
+--------------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.security.jwt;
+
+import com.pinterest.backend.security.services.UserDetailsServiceImpl;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+public class AuthTokenFilter extends OncePerRequestFilter {
+   @Autowired
+   private JwtUtils jwtUtils;
+   @Autowired
+   private UserDetailsServiceImpl userDetailsService;
+   private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
+
+   public AuthTokenFilter() {
+   }
+
+   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+      try {
+         String jwt = this.parseJwt(request);
+         if (jwt != null && this.jwtUtils.validateJwtToken(jwt)) {
+            String username = this.jwtUtils.getUserNameFromJwtToken(jwt);
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, (Object)null, userDetails.getAuthorities());
+            authentication.setDetails((new WebAuthenticationDetailsSource()).buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+         }
+      } catch (Exception var8) {
+         logger.error("Cannot set user authentication: {}", var8);
+      }
+
+      filterChain.doFilter(request, response);
+   }
+
+   private String parseJwt(HttpServletRequest request) {
+      String headerAuth = request.getHeader("Authorization");
+      return StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ") ? headerAuth.substring(7) : null;
+   }
+}
+
+
+
+jwt/JwtUtils.class
+-------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.security.jwt;
+
+import com.pinterest.backend.security.services.UserDetailsImpl;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import java.security.Key;
+import java.util.Date;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+
+@Component
+public class JwtUtils {
+   private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
+   @Value("${pinterest.app.jwtSecret}")
+   private String jwtSecret;
+   @Value("${pinterest.app.jwtExpirationMs}")
+   private int jwtExpirationMs;
+
+   public JwtUtils() {
+   }
+
+   public String generateJwtToken(Authentication authentication) {
+      UserDetailsImpl userPrincipal = (UserDetailsImpl)authentication.getPrincipal();
+      return Jwts.builder().setSubject(userPrincipal.getUsername()).setIssuedAt(new Date()).setExpiration(new Date((new Date()).getTime() + (long)this.jwtExpirationMs)).signWith(this.key(), SignatureAlgorithm.HS256).compact();
+   }
+
+   private Key key() {
+      return Keys.hmacShaKeyFor((byte[])Decoders.BASE64.decode(this.jwtSecret));
+   }
+
+   public String getUserNameFromJwtToken(String token) {
+      return ((Claims)Jwts.parserBuilder().setSigningKey(this.key()).build().parseClaimsJws(token).getBody()).getSubject();
+   }
+
+   public boolean validateJwtToken(String authToken) {
+      try {
+         Jwts.parserBuilder().setSigningKey(this.key()).build().parse(authToken);
+         return true;
+      } catch (MalformedJwtException var3) {
+         logger.error("Invalid JWT token: {}", var3.getMessage());
+      } catch (ExpiredJwtException var4) {
+         logger.error("JWT token is expired: {}", var4.getMessage());
+      } catch (UnsupportedJwtException var5) {
+         logger.error("JWT token is unsupported: {}", var5.getMessage());
+      } catch (IllegalArgumentException var6) {
+         logger.error("JWT claims string is empty: {}", var6.getMessage());
+      }
+
+      return false;
+   }
+}
+
+
+
+Repository/RoleRepository.class
+-------------------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.repository;
+
+import com.pinterest.backend.models.ERole;
+import com.pinterest.backend.models.Role;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface RoleRepository extends JpaRepository<Role, Integer> {
+   Optional<Role> findByName(ERole name);
+}
+
+
+
+UserRepository.class
+----------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.repository;
+
+import com.pinterest.backend.models.User;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+   Optional<User> findByUsername(String username);
+
+   Boolean existsByUsername(String username);
+
+   Boolean existsByEmail(String email);
+}
+
+
+Payload/Request/RegisterRequest.class
+--------------------------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.payload.request;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.Set;
+
+public class RegisterRequest {
+   private @NotBlank @Size(
+   min = 3,
+   max = 20
+) String username;
+   private @NotBlank @Size(
+   max = 50
+) @Email String email;
+   private @NotBlank String fullName;
+   private Set<String> role;
+   private @NotBlank @Size(
+   min = 6,
+   max = 40
+) String password;
+
+   public RegisterRequest() {
+   }
+
+   public String getUsername() {
+      return this.username;
+   }
+
+   public String getEmail() {
+      return this.email;
+   }
+
+   public String getFullName() {
+      return this.fullName;
+   }
+
+   public Set<String> getRole() {
+      return this.role;
+   }
+
+   public String getPassword() {
+      return this.password;
+   }
+
+   public void setUsername(final String username) {
+      this.username = username;
+   }
+
+   public void setEmail(final String email) {
+      this.email = email;
+   }
+
+   public void setFullName(final String fullName) {
+      this.fullName = fullName;
+   }
+
+   public void setRole(final Set<String> role) {
+      this.role = role;
+   }
+
+   public void setPassword(final String password) {
+      this.password = password;
+   }
+
+   public boolean equals(final Object o) {
+      if (o == this) {
+         return true;
+      } else if (!(o instanceof RegisterRequest)) {
+         return false;
+      } else {
+         RegisterRequest other = (RegisterRequest)o;
+         if (!other.canEqual(this)) {
+            return false;
+         } else {
+            label71: {
+               Object this$username = this.getUsername();
+               Object other$username = other.getUsername();
+               if (this$username == null) {
+                  if (other$username == null) {
+                     break label71;
+                  }
+               } else if (this$username.equals(other$username)) {
+                  break label71;
+               }
+
+               return false;
+            }
+
+            Object this$email = this.getEmail();
+            Object other$email = other.getEmail();
+            if (this$email == null) {
+               if (other$email != null) {
+                  return false;
+               }
+            } else if (!this$email.equals(other$email)) {
+               return false;
+            }
+
+            label57: {
+               Object this$fullName = this.getFullName();
+               Object other$fullName = other.getFullName();
+               if (this$fullName == null) {
+                  if (other$fullName == null) {
+                     break label57;
+                  }
+               } else if (this$fullName.equals(other$fullName)) {
+                  break label57;
+               }
+
+               return false;
+            }
+
+            Object this$role = this.getRole();
+            Object other$role = other.getRole();
+            if (this$role == null) {
+               if (other$role != null) {
+                  return false;
+               }
+            } else if (!this$role.equals(other$role)) {
+               return false;
+            }
+
+            Object this$password = this.getPassword();
+            Object other$password = other.getPassword();
+            if (this$password == null) {
+               if (other$password == null) {
+                  return true;
+               }
+            } else if (this$password.equals(other$password)) {
+               return true;
+            }
+
+            return false;
+         }
+      }
+   }
+
+   protected boolean canEqual(final Object other) {
+      return other instanceof RegisterRequest;
+   }
+
+   public int hashCode() {
+      int PRIME = true;
+      int result = 1;
+      Object $username = this.getUsername();
+      result = result * 59 + ($username == null ? 43 : $username.hashCode());
+      Object $email = this.getEmail();
+      result = result * 59 + ($email == null ? 43 : $email.hashCode());
+      Object $fullName = this.getFullName();
+      result = result * 59 + ($fullName == null ? 43 : $fullName.hashCode());
+      Object $role = this.getRole();
+      result = result * 59 + ($role == null ? 43 : $role.hashCode());
+      Object $password = this.getPassword();
+      result = result * 59 + ($password == null ? 43 : $password.hashCode());
+      return result;
+   }
+
+   public String toString() {
+      String var10000 = this.getUsername();
+      return "RegisterRequest(username=" + var10000 + ", email=" + this.getEmail() + ", fullName=" + this.getFullName() + ", role=" + String.valueOf(this.getRole()) + ", password=" + this.getPassword() + ")";
+   }
+}
+
+
+response/MessageResponse.class
+------------------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.payload.response;
+
+public class MessageResponse {
+   private String message;
+
+   public String getMessage() {
+      return this.message;
+   }
+
+   public void setMessage(final String message) {
+      this.message = message;
+   }
+
+   public boolean equals(final Object o) {
+      if (o == this) {
+         return true;
+      } else if (!(o instanceof MessageResponse)) {
+         return false;
+      } else {
+         MessageResponse other = (MessageResponse)o;
+         if (!other.canEqual(this)) {
+            return false;
+         } else {
+            Object this$message = this.getMessage();
+            Object other$message = other.getMessage();
+            if (this$message == null) {
+               if (other$message != null) {
+                  return false;
+               }
+            } else if (!this$message.equals(other$message)) {
+               return false;
+            }
+
+            return true;
+         }
+      }
+   }
+
+   protected boolean canEqual(final Object other) {
+      return other instanceof MessageResponse;
+   }
+
+   public int hashCode() {
+      int PRIME = true;
+      int result = 1;
+      Object $message = this.getMessage();
+      result = result * 59 + ($message == null ? 43 : $message.hashCode());
+      return result;
+   }
+
+   public String toString() {
+      return "MessageResponse(message=" + this.getMessage() + ")";
+   }
+
+   public MessageResponse(final String message) {
+      this.message = message;
+   }
+
+   public MessageResponse() {
+   }
+}
+
+
+Models/Erole.class
+-------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.models;
+
+public enum ERole {
+   ROLE_USER,
+   ROLE_ADMIN;
+
+   private ERole() {
+   }
+}
+
+
+
+Models/Role.class
+-----------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.models;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(
+   name = "roles"
+)
+public class Role {
+   @Id
+   @GeneratedValue(
+      strategy = GenerationType.IDENTITY
+   )
+   private Integer id;
+   @Enumerated(EnumType.STRING)
+   @Column(
+      length = 20
+   )
+   private ERole name;
+
+   public Integer getId() {
+      return this.id;
+   }
+
+   public ERole getName() {
+      return this.name;
+   }
+
+   public void setId(final Integer id) {
+      this.id = id;
+   }
+
+   public void setName(final ERole name) {
+      this.name = name;
+   }
+
+   public boolean equals(final Object o) {
+      if (o == this) {
+         return true;
+      } else if (!(o instanceof Role)) {
+         return false;
+      } else {
+         Role other = (Role)o;
+         if (!other.canEqual(this)) {
+            return false;
+         } else {
+            Object this$id = this.getId();
+            Object other$id = other.getId();
+            if (this$id == null) {
+               if (other$id != null) {
+                  return false;
+               }
+            } else if (!this$id.equals(other$id)) {
+               return false;
+            }
+
+            Object this$name = this.getName();
+            Object other$name = other.getName();
+            if (this$name == null) {
+               if (other$name != null) {
+                  return false;
+               }
+            } else if (!this$name.equals(other$name)) {
+               return false;
+            }
+
+            return true;
+         }
+      }
+   }
+
+   protected boolean canEqual(final Object other) {
+      return other instanceof Role;
+   }
+
+   public int hashCode() {
+      int PRIME = true;
+      int result = 1;
+      Object $id = this.getId();
+      result = result * 59 + ($id == null ? 43 : $id.hashCode());
+      Object $name = this.getName();
+      result = result * 59 + ($name == null ? 43 : $name.hashCode());
+      return result;
+   }
+
+   public String toString() {
+      Integer var10000 = this.getId();
+      return "Role(id=" + var10000 + ", name=" + String.valueOf(this.getName()) + ")";
+   }
+
+   public Role() {
+   }
+
+   public Role(final Integer id, final ERole name) {
+      this.id = id;
+      this.name = name;
+   }
+}
+
+
+Models/User.class
+---------------------
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+package com.pinterest.backend.models;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(
+   name = "users",
+   uniqueConstraints = {@UniqueConstraint(
+   columnNames = {"username"}
+), @UniqueConstraint(
+   columnNames = {"email"}
+)}
+)
+public class User {
+   @Id
+   @GeneratedValue(
+      strategy = GenerationType.IDENTITY
+   )
+   private Long id;
+   private @NotBlank @Size(
+   max = 20
+) String username;
+   private @NotBlank @Size(
+   max = 50
+) @Email String email;
+   private @NotBlank @Size(
+   max = 120
+) String password;
+   private String fullName;
+   @ManyToMany(
+      fetch = FetchType.LAZY
+   )
+   @JoinTable(
+      name = "user_roles",
+      joinColumns = {@JoinColumn(
+   name = "user_id"
+)},
+      inverseJoinColumns = {@JoinColumn(
+   name = "role_id"
+)}
+   )
+   private Set<Role> roles = new HashSet();
+
+   public User(String username, String email, String password, String fullName) {
+      this.username = username;
+      this.email = email;
+      this.password = password;
+      this.fullName = fullName;
+   }
+
+   public Long getId() {
+      return this.id;
+   }
+
+   public String getUsername() {
+      return this.username;
+   }
+
+   public String getEmail() {
+      return this.email;
+   }
+
+   public String getPassword() {
+      return this.password;
+   }
+
+   public String getFullName() {
+      return this.fullName;
+   }
+
+   public Set<Role> getRoles() {
+      return this.roles;
+   }
+
+   public void setId(final Long id) {
+      this.id = id;
+   }
+
+   public void setUsername(final String username) {
+      this.username = username;
+   }
+
+   public void setEmail(final String email) {
+      this.email = email;
+   }
+
+   public void setPassword(final String password) {
+      this.password = password;
+   }
+
+   public void setFullName(final String fullName) {
+      this.fullName = fullName;
+   }
+
+   public void setRoles(final Set<Role> roles) {
+      this.roles = roles;
+   }
+
+   public boolean equals(final Object o) {
+      if (o == this) {
+         return true;
+      } else if (!(o instanceof User)) {
+         return false;
+      } else {
+         User other = (User)o;
+         if (!other.canEqual(this)) {
+            return false;
+         } else {
+            Object this$id = this.getId();
+            Object other$id = other.getId();
+            if (this$id == null) {
+               if (other$id != null) {
+                  return false;
+               }
+            } else if (!this$id.equals(other$id)) {
+               return false;
+            }
+
+            Object this$username = this.getUsername();
+            Object other$username = other.getUsername();
+            if (this$username == null) {
+               if (other$username != null) {
+                  return false;
+               }
+            } else if (!this$username.equals(other$username)) {
+               return false;
+            }
+
+            Object this$email = this.getEmail();
+            Object other$email = other.getEmail();
+            if (this$email == null) {
+               if (other$email != null) {
+                  return false;
+               }
+            } else if (!this$email.equals(other$email)) {
+               return false;
+            }
+
+            label62: {
+               Object this$password = this.getPassword();
+               Object other$password = other.getPassword();
+               if (this$password == null) {
+                  if (other$password == null) {
+                     break label62;
+                  }
+               } else if (this$password.equals(other$password)) {
+                  break label62;
+               }
+
+               return false;
+            }
+
+            label55: {
+               Object this$fullName = this.getFullName();
+               Object other$fullName = other.getFullName();
+               if (this$fullName == null) {
+                  if (other$fullName == null) {
+                     break label55;
+                  }
+               } else if (this$fullName.equals(other$fullName)) {
+                  break label55;
+               }
+
+               return false;
+            }
+
+            Object this$roles = this.getRoles();
+            Object other$roles = other.getRoles();
+            if (this$roles == null) {
+               if (other$roles != null) {
+                  return false;
+               }
+            } else if (!this$roles.equals(other$roles)) {
+               return false;
+            }
+
+            return true;
+         }
+      }
+   }
+
+   protected boolean canEqual(final Object other) {
+      return other instanceof User;
+   }
+
+   public int hashCode() {
+      int PRIME = true;
+      int result = 1;
+      Object $id = this.getId();
+      result = result * 59 + ($id == null ? 43 : $id.hashCode());
+      Object $username = this.getUsername();
+      result = result * 59 + ($username == null ? 43 : $username.hashCode());
+      Object $email = this.getEmail();
+      result = result * 59 + ($email == null ? 43 : $email.hashCode());
+      Object $password = this.getPassword();
+      result = result * 59 + ($password == null ? 43 : $password.hashCode());
+      Object $fullName = this.getFullName();
+      result = result * 59 + ($fullName == null ? 43 : $fullName.hashCode());
+      Object $roles = this.getRoles();
+      result = result * 59 + ($roles == null ? 43 : $roles.hashCode());
+      return result;
+   }
+
+   public String toString() {
+      Long var10000 = this.getId();
+      return "User(id=" + var10000 + ", username=" + this.getUsername() + ", email=" + this.getEmail() + ", password=" + this.getPassword() + ", fullName=" + this.getFullName() + ", roles=" + String.valueOf(this.getRoles()) + ")";
+   }
+
+   public User() {
+   }
+
+   public User(final Long id, final String username, final String email, final String password, final String fullName, final Set<Role> roles) {
+      this.id = id;
+      this.username = username;
+      this.email = email;
+      this.password = password;
+      this.fullName = fullName;
+      this.roles = roles;
+   }
+}
+
+
+
+controllers/AuthController.class
+---------------------------------
+package com.pinterest.backend.controllers;
+
+import com.pinterest.backend.models.ERole;
+import com.pinterest.backend.models.Role;
+import com.pinterest.backend.models.User;
+import com.pinterest.backend.payload.request.RegisterRequest;
+import com.pinterest.backend.payload.response.MessageResponse;
+import com.pinterest.backend.repository.RoleRepository;
+import com.pinterest.backend.repository.UserRepository;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@CrossOrigin(origins = "*", maxAge = 3600)
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+  @Autowired
+  UserRepository userRepository;
+
+  @Autowired
+  RoleRepository roleRepository;
+
+  @Autowired
+  PasswordEncoder encoder;
+
+  @PostMapping("/register")
+  public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest signUpRequest) {
+    if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+      return ResponseEntity
+          .badRequest()
+          .body(new MessageResponse("User already exists"));
+    }
+
+    if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+      return ResponseEntity
+          .badRequest()
+          .body(new MessageResponse("User already exists"));
+    }
+
+    // Create new user's account
+    User user = new User(signUpRequest.getUsername(), 
+               signUpRequest.getEmail(),
+               encoder.encode(signUpRequest.getPassword()),
+               signUpRequest.getFullName());
+
+    Set<String> strRoles = signUpRequest.getRole();
+    Set<Role> roles = new HashSet<>();
+
+    if (strRoles == null) {
+      Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+          .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+      roles.add(userRole);
+    } else {
+      strRoles.forEach(role -> {
+        switch (role) {
+        case "admin":
+          Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+              .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+          roles.add(adminRole);
+
+          break;
+        default:
+          Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+              .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+          roles.add(userRole);
+        }
+      });
+    }
+
+    user.setRoles(roles);
+    userRepository.save(user);
+
+    return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+  }
+}
+
+
+
+
+Auth.tsx
+---------
+// src/services/auth.ts
+import React, { createContext, useContext, useEffect, useState } from "react";
+import axios from "axios";
+
+export type User = {
+  id: number;
+  email: string;
+  username: string;
+  fullName: string;
+  password: string;
+  mobile?: string;
+  pinIds?: number[];
+  boardIds?: number[];
+};
+
+type AuthContextType = {
+  user: User | null;
+  isAuthenticated: boolean;
+  register: (
+    data: Omit<User, "id" | "pinIds" | "boardIds">
+  ) => Promise<{ success: boolean; message: string }>;
+  login: (
+    identifier: string,
+    password: string
+  ) => Promise<{ success: boolean; message: string }>;
+  updatePassword: (
+    email: string,
+    mobile: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; message: string }>;
+  logout: () => void;
+};
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+const API = "http://localhost:8090/api/auth";
+const SESSION_KEY = "pinterest_session_user";
+
+// ---------------------
+// Lockout helpers
+// ---------------------
+function getLockState(key: string) {
+  const raw = localStorage.getItem(key);
+  return raw
+    ? JSON.parse(raw)
+    : { attempts: 0, windowStart: 0, lockedUntil: 0 };
+}
+
+function setLockState(key: string, val: any) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
+
+// ---------------------
+// Provider
+// ---------------------
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem(SESSION_KEY);
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => {
+    if (user) localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    else localStorage.removeItem(SESSION_KEY);
+  }, [user]);
+
+  // ---------------------
+  // REGISTER
+  // ---------------------
+  const register = async (data: Omit<User, "id" | "pinIds" | "boardIds">) => {
+    try {
+      // Backend handles duplicate checks now
+      
+      // create new user
+      // Backend expects: username, email, password, fullName, role
+      const payload = {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        fullName: (data as any).fullName, // Cast to any to access fullName if not in User type yet
+        role: ["user"]
+      };
+
+      const res = await axios.post(`${API}/register`, payload);
+
+      // The backend returns a message, not the user object immediately upon register usually, 
+      // but for this flow let's assume success means we can redirect. 
+      // If we want to auto-login, we might need the user data. 
+      // The current backend returns "User registered successfully!" message.
+      
+      return { success: true, message: res.data.message || "Registration successful" };
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Registration failed";
+      return { success: false, message: msg };
+    }
+  };
+
+  // ---------------------
+  // LOGIN
+  // ---------------------
+  const login = async (identifier: string, password: string) => {
+    // NOTE: Backend login endpoint is not implemented yet.
+    // This will likely fail until the backend has /login
+    
+    const key = `lock_${identifier}`;
+    const state = getLockState(key);
+    const now = Date.now();
+
+    if (state.lockedUntil && now < state.lockedUntil) {
+      const left = Math.ceil((state.lockedUntil - now) / 1000);
+      return {
+        success: false,
+        message: `Too many attempts. Try again in ${left}s`
+      };
+    }
+
+    try {
+      // Placeholder for future login endpoint
+      const res = await axios.post(`${API}/login`, { username: identifier, password });
+      
+      // Assuming backend returns user info + token
+      const found = res.data;
+
+      // Success
+      setLockState(key, { attempts: 0, windowStart: 0, lockedUntil: 0 });
+      setUser(found);
+      return { success: true, message: "Login successful" };
+    } catch (err: any) {
+       // Fallback logic or error handling
+       return { success: false, message: "Invalid login credentials (or backend not ready)" };
+    }
+  };
+
+  // ---------------------
+  // UPDATE PASSWORD
+  // ---------------------
+  const updatePassword = async (
+    email: string,
+    mobile: string,
+    newPassword: string
+  ) => {
+    try {
+      const res = await axios.get(
+        `${API}/users?email=${email}&mobile=${mobile}`
+      );
+
+      const user = res.data[0];
+      if (!user)
+        return { success: false, message: "Invalid email or mobile" };
+
+      await axios.patch(`${API}/users/${user.id}`, { password: newPassword });
+
+      return { success: true, message: "Password updated successfully" };
+    } catch {
+      return { success: false, message: "Server error" };
+    }
+  };
+
+  const logout = () => setUser(null);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        register,
+        login,
+        updatePassword,
+        logout
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext)!;
+
+
+
+
+RegistrationForm.tsx
+---------------------
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../services/auth";
+
+export default function RegisterForm() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email || !username || !fullName || !password || !confirm)
+      return setMsg("All fields required");
+
+    if (password !== confirm)
+      return setMsg("Passwords do not match");
+
+    const res = await register({ email, username, fullName, password });
+    setMsg(res.message);
+
+    if (res.success) {
+      setTimeout(() => navigate("/dashboard"), 1200);
+    }
+  };
+
+  return (
+    <div className="card form-card">
+      <h2>Create account</h2>
+
+      <form onSubmit={submit} className="form-grid">
+        <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} /></label>
+        <label>Full Name<input value={fullName} onChange={(e) => setFullName(e.target.value)} /></label>
+        <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <label>Confirm<input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></label>
+
+        <button className="btn primary">Register</button>
+      </form>
+
+      {msg && <div className="alert">{msg}</div>}
+    </div>
+  );
+}
+
+
+
+Structure
+----------
+|   BACKEND_STRUCTURE.md
+|   pom.xml
+|   README.md
+|
++---src
+|   \---main
+|       +---java
+|       |   \---com
+|       |       \---pinterest
+|       |           \---backend
+|       |               |   PinterestBackendApplication.java
+|       |               |
+|       |               +---controllers
+|       |               |       AuthController.java
+|       |               |
+|       |               +---models
+|       |               |       ERole.java
+|       |               |       Role.java
+|       |               |       User.java
+|       |               |
+|       |               +---payload
+|       |               |   +---request
+|       |               |   |       RegisterRequest.java
+|       |               |   |
+|       |               |   \---response
+|       |               |           MessageResponse.java
+|       |               |
+|       |               +---repository
+|       |               |       RoleRepository.java
+|       |               |       UserRepository.java
+|       |               |
+|       |               \---security
+|       |                   |   WebSecurityConfig.java
+|       |                   |
+|       |                   +---jwt
+|       |                   |       AuthEntryPointJwt.java
+|       |                   |       AuthTokenFilter.java
+|       |                   |       JwtUtils.java
+|       |                   |
+|       |                   \---services
+|       |                           UserDetailsImpl.java
+|       |                           UserDetailsServiceImpl.java
+|       |
+|       \---resources
+|               application.properties
+|               schema.sql
+|
+\---target
+    |   backend-0.0.1-SNAPSHOT.jar
+    |   backend-0.0.1-SNAPSHOT.jar.original
+    |
+    +---classes
+    |   |   application.properties
+    |   |   schema.sql
+    |   |
+    |   \---com
+    |       \---pinterest
+    |           \---backend
+    |               |   PinterestBackendApplication.class
+    |               |
+    |               +---controllers
+    |               |       AuthController.class
+    |               |
+    |               +---models
+    |               |       ERole.class
+    |               |       Role.class
+    |               |       User.class
+    |               |
+    |               +---payload
+    |               |   +---request
+    |               |   |       RegisterRequest.class
+    |               |   |
+    |               |   \---response
+    |               |           MessageResponse.class
+    |               |
+    |               +---repository
+    |               |       RoleRepository.class
+    |               |       UserRepository.class
+    |               |
+    |               \---security
+    |                   |   WebSecurityConfig.class
+    |                   |
+    |                   +---jwt
+    |                   |       AuthEntryPointJwt.class
+    |                   |       AuthTokenFilter.class
+    |                   |       JwtUtils.class
+    |                   |
+    |                   \---services
+    |                           UserDetailsImpl.class
+    |                           UserDetailsServiceImpl.class
+    |
+    +---generated-sources
+    |   \---annotations
+    +---maven-archiver
+    |       pom.properties
+    |
+    \---maven-status
+        \---maven-compiler-plugin
+            \---compile
+                \---default-compile
+                        createdFiles.lst
+                        inputFiles.lst
+
+
